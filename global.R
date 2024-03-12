@@ -5,9 +5,9 @@ pacman::p_load(
 # Drive Authentication
 options(
   # whenever there is one account token found, use the cached token
-  gargle_oauth_email = "george_mwangi@insupplyhealth.com",
+  gargle_oauth_email = Sys.getenv("MY_CORPORATE_EMAIL"),
   # specify auth tokens should be stored in a hidden directory ".secrets"
-  gargle_oauth_cache = "your-app-folder-name/.secrets"
+  gargle_oauth_cache = ".secrets"
 )
 
 
@@ -21,3 +21,4 @@ productCategoryCleaner <- function(x) {
       tab = str_remove(tab, "2")
     )
 }
+
