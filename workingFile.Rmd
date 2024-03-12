@@ -1,0 +1,590 @@
+
+
+```{r}
+countyDBCon <- RSQLite::dbConnect(SQLite(), "databases/countyForecastData.db")
+
+tables <- as_tibble(dbListTables(countyDBCon)) %>% 
+  filter(str_ends(value, "isiolo")) %>% 
+  pull(value) 
+  
+
+
+isioloForecasts <- tables %>% map_df(~dbGetQuery(countyDBCon, str_c("select * from ", .x))) 
+productCategorizationData <- read_excel("data/cleanProductCategorization.xlsx")
+
+
+```
+
+# Product or Equipment Analysis
+```{r}
+isioloForecasts %>% 
+  left_join(productCategorizationData, by = join_by(item_description_name_form_strength, tab)) %>% 
+  mutate(
+
+    product_or_equipment = case_when(
+      is.na(product_or_equipment)  & tab == "10.Physiotherapy" ~ "Equipment",
+      is.na(product_or_equipment)  & tab == "4.Laboratory" ~ "Product",
+      is.na(product_or_equipment)  & tab == "7.Dental" ~ "Product",
+      is.na(product_or_equipment)  & tab == "2.Pharmaceuticals" ~ "Product",
+      is.na(product_or_equipment)  & tab == "6.Radiology" ~ "Product",
+      .default = product_or_equipment
+      )
+
+  ) %>% 
+  filter(funding == "County") %>%
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    # value_of_quantities_required_including_buffer_kes = sum(value_of_quantities_required_including_buffer_kes, na.rm = TRUE),
+    # value_of_quantities_to_be_procured_kes = sum(value_of_quantities_to_be_procured_kes, na.rm = TRUE),
+    .by = c(tab, product_or_equipment)
+  ) %>% 
+  productCategoryCleaner() %>% 
+  pivot_wider(names_from = product_or_equipment, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>% 
+  adorn_totals() %>% adorn_totals("col") %>%  as_tibble()
+```
+
+
+# Ven Analysis
+```{r}
+isioloForecasts1 <- isioloForecasts %>% 
+  filter(!is.na(ven)) %>% 
+  left_join(productCategorizationData, by = join_by(item_description_name_form_strength, tab)) 
+  
+
+  
+isioloForecasts2 <- isioloForecasts %>% 
+  filter(is.na(ven)) %>% 
+  inner_join(newProductCategorization, by = join_by(item_description_name_form_strength, tab)) %>% 
+  mutate(ven = new_ven) %>% 
+  select(-new_ven)
+```
+
+
+```{r}
+isioloForecasts1 %>% 
+  filter(funding == "County") %>%
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    # value_of_quantities_required_including_buffer_kes = sum(value_of_quantities_required_including_buffer_kes, na.rm = TRUE),
+    # value_of_quantities_to_be_procured_kes = sum(value_of_quantities_to_be_procured_kes, na.rm = TRUE),
+    .by = c(ven)
+  ) %>% 
+  # productCategoryCleaner() %>% 
+  # pivot_wider(names_from = ven, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>% 
+  adorn_totals() %>% adorn_totals("col") %>%  as_tibble()
+```
+
+
+```{r}
+isioloForecasts2 %>% 
+  filter(funding == "County") %>%
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    # value_of_quantities_required_including_buffer_kes = sum(value_of_quantities_required_including_buffer_kes, na.rm = TRUE),
+    # value_of_quantities_to_be_procured_kes = sum(value_of_quantities_to_be_procured_kes, na.rm = TRUE),
+    .by = c(ven)
+  ) %>% 
+  # productCategoryCleaner() %>% 
+  # pivot_wider(names_from = ven, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>% 
+  adorn_totals() %>% adorn_totals("col") %>%  as_tibble()
+```
+
+
+
+```{r}
+isioloForecasts1 %>% 
+  bind_rows(isioloForecasts2) %>% 
+  filter(funding == "County") %>%
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    # value_of_quantities_required_including_buffer_kes = sum(value_of_quantities_required_including_buffer_kes, na.rm = TRUE),
+    # value_of_quantities_to_be_procured_kes = sum(value_of_quantities_to_be_procured_kes, na.rm = TRUE),
+    .by = c(tab, ven)
+  ) %>% 
+  productCategoryCleaner() %>%
+  pivot_wider(names_from = ven, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>% 
+  adorn_totals() %>%  as_tibble() %>% 
+  write.xlsx(here("data/isioloAnalysisByVen.xlsx"))
+```
+
+
+```{r}
+isioloForecasts %>%
+  filter(funding == "County") %>%
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    # value_of_quantities_required_including_buffer_kes = sum(value_of_quantities_required_including_buffer_kes, na.rm = TRUE),
+    # value_of_quantities_to_be_procured_kes = sum(value_of_quantities_to_be_procured_kes, na.rm = TRUE),
+    .by = c(ven)
+  ) %>% 
+  # productCategoryCleaner() %>% 
+  # pivot_wider(names_from = ven, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>% 
+  adorn_totals() %>% adorn_totals("col") %>%  as_tibble()
+```
+
+
+
+```{r}
+nakuruOrgUnits <- dbListTables(countyDBCon) %>%
+  as_tibble() %>%
+  filter(str_ends(value, "nakuru")) %>%
+  pull(value) %>%
+  map_df(~ dbGetQuery(countyDBCon, str_c("select * from ", .x))) %>%
+  distinct(sub_county, facility_name)
+
+nakuruDf <- dbListTables(countyDBCon) %>%
+  as_tibble() %>%
+  filter(str_ends(value, "nakuru")) %>%
+  pull(value) %>%
+  map_df(~ dbGetQuery(countyDBCon, str_c("select * from ", .x)))
+
+nakuruOrgUnits %>%
+  anti_join(orgUnits, by = join_by(facility_name == name))
+
+orgUnits %>% filter(name %>% str_detect("Kabati Dispe"))
+```
+
+```{r}
+hierarchyDf <- orgUnits %>%
+  filter(
+    parent_id %in% c(
+      orgUnits %>%
+        filter(parent_id %in% c(orgUnits %>% filter(parent_id == "ob6SxuRcqU4") %>% pull(id))) %>%
+        inner_join(orgUnits %>% filter(parent_id == "ob6SxuRcqU4"), by = join_by(parent_id == id)) %>% pull(id)
+    )
+  ) %>%
+  inner_join(
+    orgUnits %>%
+      filter(parent_id %in% c(orgUnits %>% filter(parent_id == "ob6SxuRcqU4") %>% pull(id))) %>%
+      inner_join(orgUnits %>% filter(parent_id == "ob6SxuRcqU4"), by = join_by(parent_id == id)),
+    by = join_by(parent_id == id)
+  ) %>%
+  transmute(
+    #facility_id = id, 
+    facility_name = name,
+    ward = name.x %>% str_remove_all(" Ward"),
+    sub_county = name.y %>% str_remove_all(" Sub County")
+  )
+```
+
+```{r}
+hierarchyDf %>%
+  filter(str_detect(facility_name, "kigonor "))
+```
+
+```{r}
+hierarchyDf %>% distinct()
+
+nakuruDf %>%
+  left_join(hierarchyDf %>% distinct(), by = join_by(sub_county, facility_name)
+  ) %>% 
+  mutate(
+    ward = case_when(
+      facility_name == "Kabati Dispensary (Ymca)" ~ "Viwandani",
+      facility_name == "Mauche Health Center" ~ "Mauche", 
+      facility_name == "Neissuit Health Center" ~ "Nessuit", 
+      facility_name == "Kihingo Dispensary (Cdf)" ~ "Kihingo", 
+      facility_name == "Mwigito. Dispensary" ~ "Kihingo", 
+      facility_name == "Sururu Dispensary (CDF)" ~ "Mau Narok", 
+      facility_name == "Kapkures Health Centre (Nakuru West)" ~ "Kapkures", 
+      facility_name == "Rajuera Dispensary" ~ "Visoi", 
+      facility_name == "Rongai Turi Dispensary" ~ "Mosop", 
+      facility_name == "Lomolo Dispensary" ~ "Soin", 
+      facility_name == "Losibil Dispensary" ~ "Soin", 
+      facility_name == "Munanda Dispensary" ~ "Mbaruk/Eburu", 
+      facility_name == "Kigoror Dispensary" ~ "Barut", 
+      .default = ward
+    )
+  ) %>% 
+  filter(funding == "County") %>% 
+  mutate(value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * price_kes) %>% 
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE), 
+    .by = c(sub_county, ward, tab)
+  ) %>%
+  productCategoryCleaner() %>% 
+  pivot_wider(names_from = tab, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>% 
+  write.xlsx(., here::here("data/nakuruRequirementsByWard.xlsx"))
+```
+
+
+```{r}
+nakuruDf %>% 
+  filter(funding == "County") %>% 
+  mutate(value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * price_kes) %>% 
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE)#, .by = c(ward)
+  ) 
+```
+
+
+
+```{r}
+nakuruOrgUnits <- dbListTables(countyDBCon) %>%
+  as_tibble() %>%
+  filter(str_ends(value, countyOfInterest)) %>%
+  pull(value) %>%
+  map_df(~ dbGetQuery(countyDBCon, str_c("select * from ", .x))) %>%
+  distinct(sub_county, facility_name)
+
+nakuruOrgUnits %>%
+  anti_join(orgUnits, by = join_by(facility_name == name))
+
+orgUnits %>%
+        filter(parent_id %in% c(orgUnits %>% filter(parent_id == "ob6SxuRcqU4")))
+
+orgUnits %>% 
+  mutate(
+    name = name %>% str_remove(" County| Sub County"),
+    name = name %>% str_trim()
+    ) %>% 
+  filter(name == "isiolo" %>% str_to_title() & parent_id == "HfVjCurKxh2") 
+
+```
+
+```{r}
+orgUnits %>% filter(name %>% str_detect("Khwisero "))
+```
+
+
+```{r}
+hierarchyDf %>%
+  filter(
+    str_detect(facility_name, "Merti") 
+    | sub_county == "Merti"
+    )
+```
+```{r}
+countyOfInterestDf %>%
+  mutate() %>% 
+  left_join(hierarchyDf %>% distinct(), by = join_by(sub_county, facility_name)
+  ) %>%
+  mutate(
+    ward = case_when(
+      # Nakuru facilities where join did not find a match
+      # return nakuru data 
+      
+      # Kakamega facilities where join did not find a match
+      
+      # Isiolo facilities where join did not find a match
+      facility_name == "Garbatulla Sub County Hospital" ~ "Garba Tulla",
+      facility_name == "Apu Dispensary" ~ "Burat",
+      facility_name == "Kiwanja Ndege Dispensary" ~ "Wabera",
+      facility_name == "Gk Prison Dispensary (Isiolo)" ~ "Wabera",
+      facility_name == "Tuale Dispensary Isiolo" ~ "Oldo/Nyiro",
+      facility_name == "Gotu Dispensary" ~ "Ngare Mara",
+      facility_name == "Waso Aipca Dispensary" ~ "Bulla Pesa",
+      facility_name == "Mata-Arba Dispensary" ~ "Cherab",
+      facility_name == "Merti Sub County Hospital" ~ "Cherab",
+      .default = ward
+    )
+  ) %>% 
+  filter(is.na(ward)) %>% 
+  distinct(sub_county, facility_name)
+  filter(funding == "County") %>% 
+  mutate(value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * price_kes) %>% 
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE), 
+    .by = c(sub_county, ward, tab)
+  ) %>%
+  productCategoryCleaner() %>% 
+  pivot_wider(names_from = tab, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>%
+  adorn_totals(c("row", "col")) %>% as_tibble()
+```
+
+
+```{r}
+countyDBCon <- RSQLite::dbConnect(SQLite(), here("databases/SCDatabase.db")) # this is 
+countyOfInterest <- "kakamega" %>% # change this to preferred county of interest 
+  str_to_lower() 
+```
+
+```{r}
+dbListTables(countyDBCon)
+```
+
+```{r}
+countyOfInterestForecastsWithVen <- countyOfInterestForecasts %>% 
+  filter(!is.na(ven))
+
+countyOfInterestForecastsWithoutVen <- countyOfInterestForecasts %>% 
+  filter(is.na(ven))
+
+newProductCategorization <- read_excel("data/newProductCategorization.xlsx") %>% 
+  rename(item_description_name_form_strength = item_name, new_ven = ven, tab = product_category)
+
+countyOfInterestForecastsWithoutVen %>% 
+  inner_join(newProductCategorization, by = join_by(item_description_name_form_strength, tab)) %>% 
+  mutate(ven = new_ven) %>% 
+  select(-c(new_ven, product_or_equipment)) %>% 
+  bind_rows(countyOfInterestForecastsWithVen) %>% 
+  filter(funding == "County") %>% 
+  mutate(value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * price_kes) %>% 
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE), 
+    .by = c(tab, ven)
+  ) %>%
+  productCategoryCleaner() %>% 
+  pivot_wider(names_from = ven, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>% 
+  adorn_totals(c("row", "col")) 
+```
+
+
+```{r}
+drive_download(
+  "https://docs.google.com/spreadsheets/d/1HqDmZNLubTW0opEEu2W2f9pAwx2MkFsr/edit#gid=126158597",
+  path = "data/product_or_equipment_classification.xlsx", 
+  overwrite = TRUE
+)
+```
+
+```{r}
+productCategorizationData <- openxlsx::read.xlsx("data/product_or_equipment_classification.xlsx", sheet = 1)
+
+productCategorizationData
+```
+
+```{r}
+drive_download(
+  "https://docs.google.com/spreadsheets/d/1kqmjoz_xV_fOizUqlF0hxey61vT7cYc1/edit#gid=1659266873",
+  path = "data/rmnch_products.xlsx", overwrite = TRUE
+)
+```
+
+```{r}
+rmnch_products <- openxlsx::read.xlsx("data/rmnch_products.xlsx", sheet = "raw")
+
+
+productCategorizationData %>% 
+  filter(item_description_name_form_strength %in% c(rmnch_products %>% pull(product)))
+
+```
+
+```{r}
+countyDBCon <- RSQLite::dbConnect(SQLite(), "databases/SCDatabase.db")
+dbDisconnect(countyDBCon)
+```
+
+```{r}
+dbListTables(countyDBCon) %>% 
+  map_df(~dbGetQuery(countyDBCon, str_c("select distinct item_description_name_form_strength, tab, ven from ", .x))) %>% 
+  distinct(item_description_name_form_strength, .keep_all = TRUE) %>% 
+  filter(is.na(ven))
+```
+
+
+
+```{r}
+# Analysis by Product or equipment
+countyOfInterestForecasts <- tables %>% map_df(~ dbGetQuery(countyDBCon, str_c("select * from ", .x)))
+productCategorizationData <- read_excel("data/product_or_equipment_classification.xlsx")
+
+countyOfInterestForecasts %>%
+  left_join(productCategorizationData, by = join_by(item_description_name_form_strength, tab)) %>% 
+  mutate(
+    product_or_equipment = case_when(
+      is.na(product_or_equipment) & tab == "10.Physiotherapy" ~ "Equipment",
+      is.na(product_or_equipment) & tab == "4.Laboratory" ~ "Product",
+      is.na(product_or_equipment) & tab == "7.Dental" ~ "Product",
+      is.na(product_or_equipment) & tab == "2.Pharmaceuticals" ~ "Product",
+      is.na(product_or_equipment) & tab == "6.Radiology" ~ "Product",
+      .default = product_or_equipment
+    )
+  ) %>%
+  filter(funding == "County") %>%
+  filter(is.na(product_or_equipment)) %>% view()
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    .by = c(tab, rmnch_product)
+  ) %>%
+  productCategoryCleaner() %>% view() 
+  pivot_wider(names_from = rmnch_product, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>%
+  adorn_totals(c("row", "col")) %>%
+  
+  write.xlsx(str_c("data/", countyOfInterest, "AnalysisByProductOrEquipment.xlsx", sep = ""))
+
+```
+
+```{r}
+productCategorizationData
+```
+
+
+
+```{r}
+countyOfInterestForecasts %>% distinct(item_description_name_form_strength) %>% 
+  inner_join(productCategorizationData, by = join_by(item_description_name_form_strength))
+```
+
+```{r}
+dbListTables(countyDBCon) %>% 
+  map_df(~dbGetQuery(countyDBCon, str_c("select distinct item_description_name_form_strength, tab, ven from ", .x))) %>% 
+  distinct(item_description_name_form_strength, .keep_all = TRUE) %>% 
+  inner_join(productCategorizationData, by = join_by(item_description_name_form_strength))
+```
+
+
+
+```{r}
+all_datasets <- read_rds("data/all_datasets.rds")
+```
+
+
+```{r}
+countyOfInterestForecasts %>%
+  left_join(productCategorizationData, by = join_by(item_description_name_form_strength, tab)) %>% 
+  mutate(rmnch_product = case_when(is.na(rmnch_product) ~ "No", .default = rmnch_product)) %>%
+  filter(funding == "County") %>%
+  summarise(
+    metric = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    .by = c(tab, rmnch_product)
+  ) %>%
+  productCategoryCleaner() %>% 
+  pivot_wider(names_from = rmnch_product, values_from = metric, values_fill = 0) %>%
+  adorn_totals(c("col")) %>%
+  mutate(
+    `% of RMNCH_Yes` = str_c(round(Yes / (Yes + No) * 100, 2), "%"),
+    `% of RMNCH_Yes_total` = str_c(round(Yes / sum(Total, na.rm = TRUE) * 100, 2), "%")
+    ) %>% 
+  rename("RMNCH_Yes" = Yes, "RMNCH_No" = No) %>% 
+  
+  relocate(Total, .before = `% of RMNCH_Yes`) %>% 
+  adorn_totals("row") %>% as_tibble() 
+```
+
+```{r}
+countyOfInterestForecasts %>%
+  left_join(productCategorizationData, by = join_by(item_description_name_form_strength, tab)) %>% 
+  mutate(rmnch_product = case_when(is.na(rmnch_product) ~ "No", .default = rmnch_product)) %>%
+  filter(funding == "County") %>%
+  summarise(
+    metric = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    .by = c(tab, rmnch_product)
+  ) %>%
+  
+  productCategoryCleaner() %>% 
+  pivot_wider(names_from = rmnch_product, values_from = metric, values_fill = 0) %>%
+  mutate(`% of RMNCH_Yes` = str_c(round(Yes / (Yes + No) * 100, 2), "%")) %>% 
+  rename("RMNCH_Yes" = Yes, "RMNCH_No" = No) %>% 
+  summarise(metric_yes = sum(RMNCH_Yes, na.rm = TRUE), metric_no = sum(RMNCH_No, na.rm = TRUE)) %>% 
+  mutate(total = metric_yes + metric_no)
+  pull(metric)
+  
+```
+
+
+```{r}
+hierarchyDf %>% count(facility_name)
+countyOfInterestDf %>% count(facility_name)
+```
+
+```{r}
+countyOfInterestDf %>%
+  left_join(hierarchyDf %>% distinct(), by = join_by(sub_county, facility_name)
+  ) %>% 
+  #filter(is.na(ward)) %>% distinct(facility_name) %>% arrange(facility_name) %>% 
+  mutate(
+    ward = case_when(
+      # Kakamega facilities where join did not find a match
+      facility_name == "Eshibembe Health Centre" ~ "Eshibembe Health Centre", 
+      facility_name == "Emungabo Dispensary" ~ "Kisa Central",
+      facility_name == "Khwisero Level Iv Hospital" ~ "Kisa North",
+      facility_name == "Mbururu dispensary" ~ "Nzoia",
+      facility_name == "Lumakanda County Hospital" ~ "Lumakanda",
+      facility_name == "Gk Prisons Dispensary (Kakamega Central)" ~ "Shirere",
+      facility_name == "Mutingongo Dispensary" ~ "Chemuche",
+      facility_name == "Shieywe dispensary" ~ "Shirungu-mugai",
+      facility_name == "Silungai dispensary" ~ "Manda-shivanga",
+      facility_name == "Lunganyiro Health Centre" ~ "Namamali",
+      facility_name == "Mungungu Dispensary" ~ "Koyonzo",
+      facility_name == "Khaunga Health centre" ~ "East Wanga",
+      facility_name == "Kamashia Health Centre" ~ "Lusheya/Lubinu",
+      facility_name == "Munganga Health Centre" ~ "East Wanga",
+      facility_name == "Wangnyang Dispensary" ~ "Etenje",
+      facility_name == "Mumias Level Iv Hospital" ~ "Mumias Central",
+      facility_name == "Mutaho Dispensary" ~ "Idakho North",
+      .default = ward
+    )
+  ) %>% 
+  filter(funding == "County") %>% 
+  # mutate(value_of_quantities_required_for_12_months = ) %>% 
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE), 
+    .by = c(sub_county, ward, tab)
+  ) %>%
+  productCategoryCleaner() %>% 
+  pivot_wider(names_from = tab, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>%
+  adorn_totals(c("row", "col")) %>% distinct(sub_county, ward, .keep_all = TRUE) 
+```
+
+
+
+
+```{r}
+countyOfInterestDf %>%
+  left_join(hierarchyDf %>% distinct(), by = join_by(sub_county, facility_name)
+  ) %>% 
+  filter(is.na(ward)) %>% distinct(facility_name, sub_county)
+```
+
+
+
+
+```{r}
+countyDBCon <- RSQLite::dbConnect(SQLite(), "databases/transNzoiaCountyForecastData.db")
+
+dbListTables(countyDBCon)
+
+countyOfInterestDf %>%
+  filter(funding == "County") %>% 
+  mutate(
+    value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * new_price_kes
+  ) %>%
+  summarise(value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = T), .by = c(tab, item_description_name_form_strength))  %>% 
+  productCategoryCleaner() %>% 
+  # slice_max(value_of_quantities_required_for_12_months, n = 5, by = tab) %>% 
+  # filter(value_of_quantities_required_for_12_months != 0) %>% 
+  
+  
+  openxlsx::write.xlsx("data/products_by_product_category_TN.xlsx")
+  group_by(tab) %>% 
+  filter(value == max(value))
+  slice_min(n = 5, value) 
+  # arrange(desc(value)) %>% 
+  adorn_totals() %>% 
+  as_tibble() %>% 
+  mutate_if(is.numeric, ~ format(., big.mark = ", ")) %>% view()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
