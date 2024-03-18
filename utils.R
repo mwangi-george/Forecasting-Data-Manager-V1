@@ -1,6 +1,6 @@
 
 # Database Connector
-lite_conn <- \(db_name){
+lite_conn <- \(db_name = "SCDatabase"){
   RSQLite::dbConnect(SQLite(), glue::glue("databases/{db_name}.db"))
 }
 
