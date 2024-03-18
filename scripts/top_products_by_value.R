@@ -14,5 +14,5 @@ lite_conn(county)[[2]] %>%
   productCategoryCleaner() %>% 
   slice_max(value_of_quantities_required_for_12_months, n = 5, by = tab) %>%
   view() %>% 
-  write.xlsx(str_c("data/", county, "top_5_products_by_value.xlsx"))
+  write.xlsx(str_c("data/", county, "_top_5_products_by_value.xlsx"))
 

@@ -1,5 +1,5 @@
 pacman::p_load(
-  tidyverse, DBI, RSQLite, googledrive, openxlsx, janitor, fuzzyjoin, here, glue
+  tidyverse, DBI, RSQLite, googledrive, openxlsx, janitor, fuzzyjoin, here, glue, gt
 )
 
 # Drive Authentication

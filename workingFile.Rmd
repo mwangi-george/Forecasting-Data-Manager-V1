@@ -559,14 +559,126 @@ countyOfInterestDf %>%
 
 
 
+```{r}
+isiolo <- db_output %>% 
+  filter(funding == "County") %>% 
+  left_join(
+    classified_df %>% select(-product_or_equipment, -rmnch_product), by = join_by(item_description_name_form_strength, tab)
+  ) %>% 
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    .by = product_classification
+    ) %>% 
+  arrange(desc(value_of_quantities_required_for_12_months)) %>% 
+  filter(!is.na(product_classification))
+```
+
+
+```{r}
+library(highcharter)
+isiolo %>% 
+  slice_head(n = 10) %>% 
+  hchart(
+    type = "bar",
+    hcaes(
+      x = product_classification,
+      y = value_of_quantities_required_for_12_months
+    ),
+    dataLabels = list(enabled = TRUE, format = "{point.y:,.0f}")
+  ) %>% 
+  hc_colors(colors = "lightsalmon") %>% 
+  hc_title(text = "Top 10 Product Categories by Value", align = "left") %>% 
+  hc_xAxis(title = "") %>% 
+  hc_yAxis(title = list(text = "Value of Quantities Required for 1 Year"))
+```
 
 
 
+```{r}
+db_output %>%
+  filter(funding == "County") %>%
+  left_join(
+    classified_df %>% select(-product_or_equipment, -rmnch_product),
+    by = join_by(item_description_name_form_strength, tab)
+  ) %>%
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    .by = c(product_classification, keph_level)
+  ) %>%
+  arrange(desc(value_of_quantities_required_for_12_months)) %>%
+  filter(!is.na(product_classification)) %>%
+  arrange(keph_level) %>%
+  pivot_wider(names_from = keph_level, values_from = value_of_quantities_required_for_12_months) %>%
+  adorn_totals(where = "col") %>%
+  arrange(desc(Total)) %>%
+  slice_head(n = 10) %>%
+  rename("Product Category" = product_classification) %>%
+  gt() %>%
+  tab_header(
+    title = "",
+    subtitle = "Top 10 product categories by level of care"
+  ) %>%
+  
+  tab_options(
+    table.width = pct(100),
+    heading.background.color = "#c30010", 
+  ) %>%
+  opt_stylize(style = 4, color = "cyan") %>% 
+  fmt_number(columns = 2:last_col(), decimals = 0)
+```
 
 
 
+```{r}
+countyOfInterestForecastsWithVen <- db_output %>% 
+  filter(!is.na(ven))
+
+countyOfInterestForecastsWithoutVen <- db_output %>% 
+  filter(is.na(ven))
+
+newProductCategorization <- read.xlsx("data/newProductCategorization.xlsx") %>% 
+  rename(item_description_name_form_strength = item_name, new_ven = ven, tab = product_category)
+
+ven_df <- countyOfInterestForecastsWithoutVen %>% 
+  left_join(newProductCategorization, by = join_by(item_description_name_form_strength, tab)) %>% 
+  mutate(ven = new_ven) %>% 
+  select(-c(new_ven, product_or_equipment)) %>% 
+  bind_rows(countyOfInterestForecastsWithVen) 
+```
 
 
+```{r}
+ven_df %>% 
+  filter(funding == "County") %>%
+  left_join(
+    classified_df %>% select(-product_or_equipment, -rmnch_product),
+    by = join_by(item_description_name_form_strength, tab)
+  ) %>%
+  summarise(
+    value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE),
+    .by = c(product_classification, ven)
+  ) %>%
+  arrange(desc(value_of_quantities_required_for_12_months)) %>%
+  filter(!is.na(product_classification)) %>%
+  arrange(ven) %>%
+  pivot_wider(names_from = ven, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>%
+  adorn_totals(where = "col") %>%
+  arrange(desc(Total)) %>%
+  slice_head(n = 10) %>%
+  relocate(V, .before = E) %>% 
+  rename("Product Category" = product_classification) %>%
+  gt() %>%
+  tab_header(
+    title = "",
+    subtitle = "Top 10 product categories by level of VEN"
+  ) %>%
+  tab_options(
+    table.width = pct(100),
+    heading.background.color = "#c30010"
+  ) %>%
+  opt_stylize(style = 4, color = "cyan") %>% 
+  fmt_number(columns = 2:last_col(), decimals = 0)
+```
 
 
 
