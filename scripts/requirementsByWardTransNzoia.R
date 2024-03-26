@@ -47,32 +47,31 @@ hierarchyDf <- orgUnits %>%
 countyOfInterestDf %>%
   left_join(hierarchyDf %>% distinct(), by = join_by(sub_county, facility_name)
   ) %>% 
-  filter(is.na(ward)) %>% distinct(facility_name, sub_county)
   mutate(
     ward = case_when(
       # Nakuru facilities where join did not find a match
-      facility_name == "Chepsiro Dispensary" ~ "",
-      facility_name == "Kaboleet Dispensary" ~ "", 
-      facility_name == "Endebess Sub County Hospital" ~ "", 
-      facility_name == "Mount Elgon National Park Health Centre" ~ "", 
-      facility_name == "Nabeki Dispensary" ~ "", 
-      facility_name == "Mount Elgon Hospital" ~ "", 
-      facility_name == "Matunda Sub County Hospital" ~ "", 
-      facility_name == "Nazareth Sisters Kipkorion Dispensary" ~ "", 
-      facility_name == "Sarura Dispensary" ~ "", 
+      facility_name == "Chepsiro Dispensary" ~ "Chepsiro/Kiptoror",
+      facility_name == "Kaboleet Dispensary" ~ "Makutano", 
+      facility_name == "Endebess Sub County Hospital" ~ "Endebess", 
+      facility_name == "Mount Elgon National Park Health Centre" ~ "Endebess", 
+      facility_name == "Nabeki Dispensary" ~ "Chepchoina", 
+      facility_name == "Mount Elgon Hospital" ~ "Hospital", 
+      facility_name == "Matunda Sub County Hospital" ~ "Nabiswa",
+      facility_name == "Nazareth Sisters Kipkorion Dispensary" ~ "Kwanza", 
+      facility_name == "Sarura Dispensary" ~ "Kwanza", 
       .default = ward
     )
   ) %>% 
   # filter(is.na(ward)) %>% 
   filter(funding == "County") %>%
-  mutate(value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * price_kes) %>% 
+  mutate(value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * new_price_kes) %>%
   summarise(
     value_of_quantities_required_for_12_months = sum(value_of_quantities_required_for_12_months, na.rm = TRUE), 
     .by = c(sub_county, ward, tab)
   ) %>%
   productCategoryCleaner() %>% 
   pivot_wider(names_from = tab, values_from = value_of_quantities_required_for_12_months, values_fill = 0) %>% 
-  adorn_totals(c("row", "col")) %>% distinct(sub_county, ward, .keep_all = TRUE) %>%  view() %>%
+  # adorn_totals(c("row", "col")) %>% distinct(sub_county, ward, .keep_all = TRUE) %>%  view() %>%
   write.xlsx(., here::here(str_c("data/requirementsByWard/", countyOfInterest, "RequirementsByWard.xlsx", sep = "")))
 
 
