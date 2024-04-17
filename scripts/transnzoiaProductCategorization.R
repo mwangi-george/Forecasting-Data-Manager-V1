@@ -84,12 +84,7 @@ transNzoiaDf2 %>%
   
 
 
-
-
-
-
-
-# Disconnect
+# Disconnect db
 dbDisconnect(countyDBCon)
 
 
