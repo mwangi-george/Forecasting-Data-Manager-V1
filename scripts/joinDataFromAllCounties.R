@@ -1,7 +1,7 @@
 source("global.R")
 
 product_classifications <- read.xlsx("data/product_or_equipment_classification.xlsx")
-product_classifications %>% view()
+# product_classifications %>% view()
 transnzoiaCon <- dbConnect(SQLite(), "databases/transNzoiaCountyForecastData.db")
 countyDBCon <- RSQLite::dbConnect(SQLite(), "databases/SCDatabase.db")
 
@@ -28,6 +28,8 @@ data_joiner <- function() {
       county = case_when(county %in% c("TRANS NZOIA", "Trans Nzoia") ~ "Trans Nzoia", .default = "Trans Nzoia"),
       sub_county, facility_name, keph_level, tab, ven, funding,
       product_name = item_description_name_form_strength,
+      pack_size = pack_size.x, price_kes = new_price_kes,
+      quantity_required_for_period_specified_above,
       value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * new_price_kes,
       value_of_quantities_required_including_buffer_kes,
       value_of_quantities_to_be_procured_kes
@@ -38,6 +40,8 @@ data_joiner <- function() {
         transmute(
           county, sub_county, facility_name, keph_level, tab, ven, funding,
           product_name = item_description_name_form_strength,
+          pack_size, price_kes, 
+          quantity_required_for_period_specified_above,
           value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * price_kes,
           value_of_quantities_required_including_buffer_kes,
           value_of_quantities_to_be_procured_kes

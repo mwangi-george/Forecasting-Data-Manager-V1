@@ -10,12 +10,12 @@ options(
   gargle_oauth_cache = ".secrets"
 )
 
-# Update classifications 
-drive_download(
-  file = "https://docs.google.com/spreadsheets/d/1HqDmZNLubTW0opEEu2W2f9pAwx2MkFsr/edit#gid=36781670",
-  path = "data/product_or_equipment_classification.xlsx",
-  overwrite = TRUE
-)
+# # Update classifications 
+# drive_download(
+#   file = "https://docs.google.com/spreadsheets/d/1HqDmZNLubTW0opEEu2W2f9pAwx2MkFsr/edit#gid=36781670",
+#   path = "data/product_or_equipment_classification.xlsx",
+#   overwrite = TRUE
+# )
 
 productCategoryCleaner <- function(x) {
   x %>%
