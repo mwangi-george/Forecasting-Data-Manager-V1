@@ -82,10 +82,10 @@ if (!dbExistsTable(my_db_connection, "all_counties_forecast_data")) {
 
 
 # Table Structure ---------------------------------------------------------
-
+# 
 # postgres=# \d all_counties_forecast_data
 #   Table "public.all_counties_forecast_data"
-#                       Column                       |       Type       | Collation | Nullable | Default
+# Column                       |       Type       | Collation | Nullable | Default
 # ---------------------------------------------------+------------------+-----------+----------+---------
 #   county                                            | text             |           |          |
 #   sub_county                                        | text             |           |          |
@@ -95,6 +95,9 @@ if (!dbExistsTable(my_db_connection, "all_counties_forecast_data")) {
 #   ven                                               | text             |           |          |
 #   funding                                           | text             |           |          |
 #   product_name                                      | text             |           |          |
+#   pack_size                                         | text             |           |          |
+#   price_kes                                         | double precision |           |          |
+#   quantity_required_for_period_specified_above      | double precision |           |          |
 #   value_of_quantities_required_for_12_months        | double precision |           |          |
 #   value_of_quantities_required_including_buffer_kes | double precision |           |          |
 #   value_of_quantities_to_be_procured_kes            | double precision |           |          |
@@ -103,35 +106,3 @@ if (!dbExistsTable(my_db_connection, "all_counties_forecast_data")) {
 #   rmnch_product                                     | text             |           |          |
 #   moh_647_name                                      | text             |           |          |
 #   
-#   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
