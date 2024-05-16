@@ -26,7 +26,9 @@ data_joiner <- function() {
   df_joined <- allTransNzoiaData %>%
     transmute(
       county = case_when(county %in% c("TRANS NZOIA", "Trans Nzoia") ~ "Trans Nzoia", .default = "Trans Nzoia"),
-      sub_county, facility_name, keph_level, tab, ven, funding,
+      sub_county, facility_name, keph_level, tab, 
+      ven = case_when(!ven %in% c('V', 'E', 'N') ~ NA, .default = ven), 
+      funding,
       product_name = item_description_name_form_strength,
       pack_size = pack_size.x, price_kes = new_price_kes,
       quantity_required_for_period_specified_above,
@@ -38,16 +40,19 @@ data_joiner <- function() {
     bind_rows(
       allOtherCountiesData %>%
         transmute(
-          county, sub_county, facility_name, keph_level, tab, ven, funding,
+          county, sub_county, facility_name, keph_level, tab, 
+          ven, 
+          funding,
           product_name = item_description_name_form_strength,
           pack_size, price_kes, 
           quantity_required_for_period_specified_above,
           value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * price_kes,
           value_of_quantities_required_including_buffer_kes,
           value_of_quantities_to_be_procured_kes
-        )
+        ) 
     ) %>%
-    left_join(product_classifications %>% clean_names(), by = join_by(product_name == item_description_name_form_strength, tab))
+    left_join(product_classifications %>% clean_names(), by = join_by(product_name == item_description_name_form_strength, tab)) %>% 
+    productCategoryCleaner() 
 
   county_summary <- df_joined %>%
     filter(funding == "County") %>%
