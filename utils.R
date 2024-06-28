@@ -16,3 +16,4 @@ lite_conn <- \(county_name, db_name = "SCDatabase"){
 county_of_interest <- \(county_name){
   county_name %>% str_to_lower()
 }
+
