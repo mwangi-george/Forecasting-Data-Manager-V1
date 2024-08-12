@@ -686,6 +686,16 @@ ven_df %>%
 
 
 
+```{r}
+workload_nairobi %>% 
+  summarise(
+    value=sum(value, na.rm = TRUE),
+    .by = c(organisation_unit, facility_ownership, keph_level)
+  )
+
+my_db_connection("FP") %>% 
+  dbGetQuery("select * from organisation_units") 
+```
 
 
 

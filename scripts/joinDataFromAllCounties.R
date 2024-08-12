@@ -4,10 +4,19 @@ product_classifications <- read.xlsx("data/product_or_equipment_classification.x
 # product_classifications %>% view()
 transnzoiaCon <- dbConnect(SQLite(), "databases/transNzoiaCountyForecastData.db")
 countyDBCon <- RSQLite::dbConnect(SQLite(), "databases/SCDatabase.db")
+masterCon <- dbConnect(SQLite(), "databases/master_for_data_collection.db")
 
 
 dbListTables(transnzoiaCon)
 dbListTables(countyDBCon)
+dbListTables(masterCon)
+dbReadTable(masterCon, "master") %>% distinct(county)
+
+countyMasters <- dbReadTable(masterCon, "master") %>% 
+  group_by(county) %>% 
+  group_split()
+
+countyMasters[[1]] %>% head() %>% view()
 
 transnzoiaSubCounties <- c("Saboti", "Kwanza", "Kiminini", "Endebess", "Cherangany")
 
@@ -15,6 +24,7 @@ transnzoiaSubCounties <- c("Saboti", "Kwanza", "Kiminini", "Endebess", "Cheranga
 query <- "SELECT * FROM "
 allTransNzoiaData <- map_df(transnzoiaSubCounties, ~ dbGetQuery(transnzoiaCon, str_c(query, .x)))
 allTransNzoiaData %>% dim()
+allTransNzoiaData %>% head() %>% view()
 
 colsTrans <- names(allTransNzoiaData)
 
@@ -26,33 +36,45 @@ data_joiner <- function() {
   df_joined <- allTransNzoiaData %>%
     transmute(
       county = case_when(county %in% c("TRANS NZOIA", "Trans Nzoia") ~ "Trans Nzoia", .default = "Trans Nzoia"),
-      sub_county, facility_name, keph_level, tab, 
+      sub_county, 
+      facility_type,
+      facility_name, 
+      sub_category,
+      keph_level, 
+      tab, 
       ven = case_when(!ven %in% c('V', 'E', 'N') ~ NA, .default = ven), 
       funding,
-      product_name = item_description_name_form_strength,
+      item_description_name_form_strength,
       pack_size = pack_size.x, price_kes = new_price_kes,
       quantity_required_for_period_specified_above,
       value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * new_price_kes,
       value_of_quantities_required_including_buffer_kes,
-      value_of_quantities_to_be_procured_kes
+      value_of_quantities_to_be_procured_kes,
+      contains_lab
     ) %>%
     # other counties
     bind_rows(
       allOtherCountiesData %>%
         transmute(
-          county, sub_county, facility_name, keph_level, tab, 
+          county, 
+          sub_county,
+          facility_type,
+          facility_name, 
+          sub_category,
+          keph_level,
+          tab, 
           ven, 
           funding,
-          product_name = item_description_name_form_strength,
+          item_description_name_form_strength,
           pack_size, price_kes, 
           quantity_required_for_period_specified_above,
           value_of_quantities_required_for_12_months = quantity_required_for_period_specified_above * price_kes,
           value_of_quantities_required_including_buffer_kes,
-          value_of_quantities_to_be_procured_kes
+          value_of_quantities_to_be_procured_kes,
+          contains_lab
         ) 
     ) %>%
-    left_join(product_classifications %>% clean_names(), by = join_by(product_name == item_description_name_form_strength, tab)) %>% 
-    productCategoryCleaner() 
+    left_join(product_classifications %>% clean_names(), by = join_by(item_description_name_form_strength, tab)) 
 
   county_summary <- df_joined %>%
     filter(funding == "County") %>%
