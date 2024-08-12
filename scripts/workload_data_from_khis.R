@@ -6,6 +6,9 @@ source("utils.R")
 # Edit here
 county_of_interest_id <- c("Laikipia" = "xuFdFy6t9AH")
 
+# define dynamic path to save data
+path_to_save <- glue("data/Workload_by_County/{names(county_of_interest_id)}.xlsx")
+
 
 # API Definition ------------
 api_definition <- function(data_period, county_id) {
@@ -92,11 +95,14 @@ merge_transform_save <- function(){
   
   print(output_df %>% head())
   
-  # define dynamic path to save data
-  path_to_save <- glue("data/Workload_by_County/{names(county_of_interest_id)}.xlsx")
-  
   # save
   output_df %>% openxlsx::write.xlsx(path_to_save)
+  
+  # Open saved file in Excel - get input for facility classification
+  output_df %>%
+    select(keph_level, sub_county, facility_name, workload = total_workload, mfl_code, facility_ownership) %>% 
+    show_in_excel()
+  
 }
 
 

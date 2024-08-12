@@ -698,6 +698,14 @@ my_db_connection("FP") %>%
 ```
 
 
+```{r}
+openxlsx::read.xlsx("data/Workload_by_County/Nairobi.xlsx") -> df
+  
+
+df %>% 
+  select(keph_level, sub_county, facility_name, workload = total_workload, mfl_code, facility_ownership) %>% 
+  show_in_excel()
+```
 
 
 

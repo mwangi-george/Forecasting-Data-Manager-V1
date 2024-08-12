@@ -31,3 +31,11 @@ my_db_connection <- function(db_name) {
   
   return(con)
 }
+
+
+show_in_excel <- function(df, format) {
+  tmp <- paste0(tempfile(), ".xlsx")
+  
+  openxlsx::write.xlsx(df, tmp)
+  fs::file_show(path = tmp)
+}
