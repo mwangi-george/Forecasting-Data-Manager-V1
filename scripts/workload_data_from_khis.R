@@ -3,11 +3,14 @@
 pacman::p_load(tidyverse, DBI, httr, memoise, janitor, glue, memoise)
 source("utils.R")
 
+county_name <- readline(prompt = "Enter name of this County, e.g Nairobi: ")
+county_id <- readline(prompt = "Enter id for this county e.g jkG3zaihdSs: ")
+
 # Edit here
-county_of_interest_id <- c("Laikipia" = "xuFdFy6t9AH")
+county_of_interest_id <- c(county_name = county_id)
 
 # define dynamic path to save data
-path_to_save <- glue("data/Workload_by_County/{names(county_of_interest_id)}.xlsx")
+path_to_save <- glue("data/Workload_by_County/{county_name}.xlsx")
 
 
 # API Definition ------------
@@ -88,10 +91,12 @@ merge_transform_save <- function(){
       ward=ward_name,
       facility_name,
       facility_id,
+      sub_county_2=sub_county_name,
       mfl_code,
       facility_ownership=facility_ownership_short,
       total_workload=value
-    ) 
+    ) %>% 
+    filter(facility_ownership == "Ministry of Health")
   
   print(output_df %>% head())
   
